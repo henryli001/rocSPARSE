@@ -45,10 +45,10 @@ supported_distro( )
   fi
 
   case "${ID}" in
-    ubuntu|centos|rhel|fedora|sles|opensuse-leap)
+    ubuntu|centos|rhel|fedora|sles|opensuse-leap|azurelinux)
         true
         ;;
-    *)  printf "This script is currently supported on Ubuntu, CentOS, RHEL, Fedora and SLES\n"
+    *)  printf "This script is currently supported on Ubuntu, CentOS, RHEL, Fedora, SLES, OpenSUSE Leap and Azure Linux\n"
         exit 2
         ;;
   esac
@@ -145,13 +145,15 @@ install_packages( )
   local library_dependencies_centos8=( "gcc-gfortran" "epel-release" "make" "cmake3" "gcc-c++" "rpm-build" "numactl-libs" )
   local library_dependencies_fedora=( "gcc-gfortran" "make" "cmake" "gcc-c++" "libcxx-devel" "rpm-build" "numactl-libs" )
   local library_dependencies_sles=( "gcc-fortran" "make" "cmake" "gcc-c++" "rpm-build" )
+  local library_dependencies_azurelinux=( "gcc-gfortran" "make" "cmake" "gcc-c++" "libcxx-devel" "rpm-build" "libnuma" )
 
   local client_dependencies_ubuntu=( "python3" "python3-yaml" )
   local client_dependencies_centos=( "python36" "python3-pip" )
   local client_dependencies_centos8=( "python36" "python3-pip" )
   local client_dependencies_fedora=( "python36" "PyYAML" "python3-pip" )
   local client_dependencies_sles=( "pkg-config" "dpkg" "python3-pip" )
-
+  local client_dependencies_azurelinux=( "python3" "PyYAML" "python3-pip" )
+ 
   if [[ ( "${ID}" == "centos" ) || ( "${ID}" == "rhel" ) ]]; then
     if [[ "${MAJORVERSION}" == "6" ]]; then
       library_dependencies_centos+=( "numactl" )
@@ -226,8 +228,19 @@ install_packages( )
         pip3 install pyyaml
       fi
       ;;
+    
+    azurelinux)
+#     elevate_if_not_root dnf -y update
+      install_dnf_packages "${library_dependencies_azurelinux[@]}"
+
+      if [[ "${build_clients}" == true ]]; then
+        install_dnf_packages "${client_dependencies_azurelinux[@]}"
+        pip3 install pyyaml
+      fi
+      ;;
+
     *)
-      echo "This script is currently supported on Ubuntu, CentOS, RHEL and Fedora"
+      echo "This script is currently supported on Ubuntu, CentOS, RHEL, Fedora, SLES, OpenSUSE Leap and Azurelinux"
       exit 2
       ;;
   esac
@@ -621,6 +634,8 @@ pushd .
       sles|opensuse-leap)
         elevate_if_not_root zypper -n --no-gpg-checks install rocsparse-*.rpm
       ;;
+      azurelinux)
+        elevate_if_not_root rpm -Uvh --replacefiles rocsparse-*.rpm
     esac
 
   fi
